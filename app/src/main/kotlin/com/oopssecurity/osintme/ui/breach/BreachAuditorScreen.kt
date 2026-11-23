@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -70,6 +73,7 @@ import com.oopssecurity.osintme.ui.theme.OffWhite
 import com.oopssecurity.osintme.ui.theme.SkyCyan
 import com.oopssecurity.osintme.ui.theme.SlateGrey
 import com.oopssecurity.osintme.ui.theme.SlateObsidian
+import com.oopssecurity.osintme.ui.theme.SoftIndigo
 import com.oopssecurity.osintme.ui.theme.StatusRisk
 import com.oopssecurity.osintme.ui.theme.StatusSafe
 import com.oopssecurity.osintme.ui.theme.StatusWarning
@@ -151,6 +155,7 @@ fun BreachAuditorScreen(
                     email = uiState.emailInput,
                     isLoading = uiState.isCheckingEmail,
                     result = uiState.emailResult,
+                    gravatar = uiState.gravatarProfile,
                     error = uiState.errorMessage,
                     offers = uiState.partnerOffers,
                     onEmailChange = { viewModel.onEmailChange(it) },
@@ -183,6 +188,7 @@ fun EmailBreachSection(
     email: String,
     isLoading: Boolean,
     result: com.oopssecurity.osintme.data.model.EmailBreachResult?,
+    gravatar: com.oopssecurity.osintme.data.model.GravatarProfile? = null,
     error: String?,
     offers: List<com.oopssecurity.osintme.data.model.AffiliateOffer>,
     onEmailChange: (String) -> Unit,
@@ -318,6 +324,12 @@ fun EmailBreachSection(
                             }
                         }
                     }
+                }
+            }
+
+            if (gravatar != null) {
+                item {
+                    GravatarProfileCard(profile = gravatar)
                 }
             }
 
@@ -541,6 +553,84 @@ fun PasswordLeakSection(
                     Text(text = "PASSWORD MANAGER RECOMMENDATIONS", fontSize = 11.sp, color = SlateGrey, style = MaterialTheme.typography.labelSmall)
                     Spacer(modifier = Modifier.height(6.dp))
                     PartnerOfferCard(offer = offers.first())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GravatarProfileCard(profile: com.oopssecurity.osintme.data.model.GravatarProfile) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp)),
+        colors = CardDefaults.cardColors(containerColor = CharcoalNavy),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(SkyCyan.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "GRAVATAR PROFILE PIVOT",
+                            color = SkyCyan,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (profile.displayName.isNotEmpty()) profile.displayName else profile.preferredUsername,
+                        color = OffWhite,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (profile.currentLocation.isNotEmpty()) {
+                    Text(profile.currentLocation, color = SlateGrey, fontSize = 11.sp)
+                }
+            }
+
+            if (profile.aboutMe.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(profile.aboutMe, color = SlateGrey, fontSize = 12.sp)
+            }
+
+            if (profile.accounts.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("VERIFIED LINKED ACCOUNTS", color = MutedSlate, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+                Spacer(modifier = Modifier.height(4.dp))
+                profile.accounts.forEach { acc ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = acc.domain.uppercase(),
+                            color = SoftIndigo,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = if (acc.username.isNotEmpty()) "@${acc.username}" else acc.display,
+                            color = OffWhite,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             }
         }

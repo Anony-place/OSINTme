@@ -24,12 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PermIdentity
 import androidx.compose.material.icons.filled.PersonSearch
 import androidx.compose.material.icons.filled.Phone
@@ -40,6 +43,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -47,6 +51,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -64,14 +69,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.oopssecurity.osintme.BreachAuditorNav
+import com.oopssecurity.osintme.CaseManagementNav
 import com.oopssecurity.osintme.ComplianceDisclaimerNav
 import com.oopssecurity.osintme.DomainReconNav
 import com.oopssecurity.osintme.DorkGeneratorNav
 import com.oopssecurity.osintme.ExifInspectorNav
 import com.oopssecurity.osintme.HygieneChecklistNav
 import com.oopssecurity.osintme.LinkSanitizerNav
+import com.oopssecurity.osintme.OpsecSettingsNav
 import com.oopssecurity.osintme.PhoneReconNav
 import com.oopssecurity.osintme.ScanHistoryNav
+import com.oopssecurity.osintme.ThreatIntelNav
 import com.oopssecurity.osintme.UsernameReconNav
 import com.oopssecurity.osintme.ui.components.ExposureScoreCard
 import com.oopssecurity.osintme.ui.components.PartnerOfferCard
@@ -96,6 +104,7 @@ import com.oopssecurity.osintme.util.InputType
 @Composable
 fun DashboardScreen(
     onNavigate: (Any) -> Unit,
+    onMenuClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -111,6 +120,7 @@ fun DashboardScreen(
         containerColor = SlateObsidian,
         topBar = {
             TacticalStationHeader(
+                onMenuClick = onMenuClick,
                 onHistoryClick = { onNavigate(ScanHistoryNav) },
                 onPolicyClick = { onNavigate(ComplianceDisclaimerNav) }
             )
@@ -162,6 +172,38 @@ fun DashboardScreen(
                     scoreState = uiState.exposureScoreState,
                     onViewChecklistClick = { onNavigate(HygieneChecklistNav) }
                 )
+            }
+
+            // 3.5. Case Management & Evidence Dossier
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CharcoalNavy)
+                        .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+                        .clickable { onNavigate(CaseManagementNav) }
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .background(MatrixGreen.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.FolderSpecial, contentDescription = null, tint = MatrixGreen, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text("Investigation Cases & Dossiers", color = OffWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Room DB evidence graph & report compiler", color = SlateGrey, fontSize = 11.sp)
+                        }
+                    }
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, tint = SkyCyan, modifier = Modifier.size(18.dp))
+                }
             }
 
             // 4. STRUCTURED SUITE 1: NETWORK & INFRASTRUCTURE RECON
@@ -307,6 +349,21 @@ fun DashboardScreen(
                 }
             }
 
+            // 8. STRUCTURED SUITE 5: THREAT INTEL & MALWARE FEEDS
+            item {
+                CategoryHeader("WING 05 // THREAT INTELLIGENCE & MALWARE FEEDS", StatusRisk)
+                Spacer(modifier = Modifier.height(8.dp))
+                TacticalToolCard(
+                    title = "URLhaus Malware & Google Dorks",
+                    subtitle = "Abuse.ch live cybercrime malware feeds & weaponized defensive search operators",
+                    badge = "ABUSE.CH",
+                    icon = Icons.Default.BugReport,
+                    accentColor = StatusRisk,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onNavigate(ThreatIntelNav(uiState.query)) }
+                )
+            }
+
             // 8. Recent Target Dossiers (On-Device Local History)
             if (uiState.recentScans.isNotEmpty()) {
                 item {
@@ -396,6 +453,7 @@ fun DashboardScreen(
 
 @Composable
 private fun TacticalStationHeader(
+    onMenuClick: () -> Unit = {},
     onHistoryClick: () -> Unit,
     onPolicyClick: () -> Unit
 ) {
@@ -404,37 +462,50 @@ private fun TacticalStationHeader(
             .fillMaxWidth()
             .background(SlateObsidian)
             .border(width = 1.dp, color = CardBorder)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = SkyCyan,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "OSINTme",
-                        color = OffWhite,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = 1.sp
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Open Wings Navigation Drawer",
+                        tint = SkyCyan
                     )
                 }
-                Text(
-                    text = "BY OOPS SECURITY // TACTICAL RECON STATION",
-                    color = MutedSlate,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = SkyCyan,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "OSINTme",
+                            color = OffWhite,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                    Text(
+                        text = "BY OOPS SECURITY // TACTICAL RECON STATION",
+                        color = MutedSlate,
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

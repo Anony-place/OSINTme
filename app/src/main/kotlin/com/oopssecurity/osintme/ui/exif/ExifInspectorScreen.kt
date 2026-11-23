@@ -228,6 +228,12 @@ fun ExifInspectorScreen(
                 }
             }
 
+            if (uiState.imageUri != null) {
+                item {
+                    ReverseImageSearchCard(context = context)
+                }
+            }
+
             // Loading state
             if (uiState.isExtracting) {
                 item {
@@ -372,5 +378,92 @@ private fun ExifDataRow(label: String, value: String) {
     ) {
         Text(label, color = SlateGrey, fontSize = 12.sp)
         Text(value, color = OffWhite, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun ReverseImageSearchCard(context: android.content.Context) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp)),
+        colors = CardDefaults.cardColors(containerColor = CharcoalNavy),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = "REVERSE IMAGE SEARCH PIVOTS",
+                color = SkyCyan,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Launch browser pivots to identify faces, locations, and duplicate appearances online.",
+                color = SlateGrey,
+                fontSize = 12.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://lens.google.com/"))
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkerSurface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Google Lens", color = OffWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://yandex.com/images/"))
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkerSurface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Yandex Visual", color = OffWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://tineye.com/"))
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkerSurface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("TinEye", color = OffWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.bing.com/visualsearch"))
+                        context.startActivity(intent)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkerSurface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Bing Visual", color = OffWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+        }
     }
 }

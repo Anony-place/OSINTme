@@ -7,6 +7,18 @@ import kotlinx.serialization.Serializable
 data object DashboardNav : NavKey
 
 @Serializable
+data object CaseManagementNav : NavKey
+
+@Serializable
+data class CaseDetailNav(val caseId: String) : NavKey
+
+@Serializable
+data class ThreatIntelNav(val initialTarget: String = "") : NavKey
+
+@Serializable
+data object OpsecSettingsNav : NavKey
+
+@Serializable
 data class BreachAuditorNav(val initialEmail: String = "") : NavKey
 
 @Serializable

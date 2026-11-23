@@ -54,7 +54,29 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extractNavFromIntent(intent: Intent?): NavKey? {
-        if (intent == null || intent.action != Intent.ACTION_SEND) return null
+        if (intent == null) return null
+
+        intent.getStringExtra("navigate_to")?.let { target ->
+            val targetArg = intent.getStringExtra("target_arg") ?: ""
+            return when (target.lowercase()) {
+                "cases", "case_management" -> CaseManagementNav
+                "case_detail" -> CaseDetailNav(targetArg)
+                "threat_intel", "urlhaus" -> ThreatIntelNav(targetArg)
+                "opsec" -> OpsecSettingsNav
+                "breach" -> BreachAuditorNav(targetArg)
+                "username" -> UsernameReconNav(targetArg)
+                "phone" -> PhoneReconNav(targetArg)
+                "domain" -> DomainReconNav(targetArg)
+                "dorks" -> DorkGeneratorNav(targetArg)
+                "sanitizer" -> LinkSanitizerNav(targetArg)
+                "hygiene" -> HygieneChecklistNav
+                "history" -> ScanHistoryNav
+                "compliance" -> ComplianceDisclaimerNav
+                else -> null
+            }
+        }
+
+        if (intent.action != Intent.ACTION_SEND) return null
 
         val type = intent.type ?: return null
 

@@ -182,3 +182,74 @@ data class AffiliateOffer(
     val badge_text: String = "Sponsored Partner",
     val is_active: Boolean = true
 )
+
+@Serializable
+data class GravatarAccount(
+    val domain: String = "",
+    val display: String = "",
+    val url: String = "",
+    val username: String = "",
+    val verified: Boolean = false
+)
+
+@Serializable
+data class GravatarProfile(
+    val emailHash: String,
+    val preferredUsername: String = "",
+    val displayName: String = "",
+    val aboutMe: String = "",
+    val currentLocation: String = "",
+    val thumbnailUrl: String = "",
+    val profileUrl: String = "",
+    val accounts: List<GravatarAccount> = emptyList(),
+    val personalUrls: List<String> = emptyList()
+)
+
+@Serializable
+data class UrlhausPayload(
+    val url: String,
+    val urlStatus: String = "online", // "online", "offline"
+    val threat: String = "malware_download",
+    val tags: List<String> = emptyList(),
+    val dateAdded: String = ""
+)
+
+@Serializable
+data class UrlhausResult(
+    val target: String,
+    val queryStatus: String, // "ok", "no_results", "host_not_found"
+    val isMalicious: Boolean,
+    val firstSeen: String = "",
+    val urlCount: Int = 0,
+    val spamhausListed: Boolean = false,
+    val surblListed: Boolean = false,
+    val payloads: List<UrlhausPayload> = emptyList(),
+    val scanTimestamp: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class InvestigationCase(
+    val id: String,
+    val title: String,
+    val target: String,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val notes: String = "",
+    val tags: List<String> = emptyList(),
+    val status: String = "ACTIVE" // "ACTIVE", "ARCHIVED", "FLAGGED"
+)
+
+@Serializable
+data class ScanArtifact(
+    val id: String,
+    val caseId: String,
+    val wingType: String, // "NETWORK", "IDENTITY", "SOCIAL", "TELEPHONY", "FORENSICS", "THREAT"
+    val artifactType: String, // "SHODAN_IP", "SUBDOMAINS", "BREACHES", "USERNAME", "PHONE", "EXIF", "URLHAUS"
+    val queryTarget: String,
+    val title: String,
+    val summary: String,
+    val rawJson: String,
+    val confidence: String = "HIGH", // "HIGH", "MEDIUM", "LOW"
+    val sourceApi: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)

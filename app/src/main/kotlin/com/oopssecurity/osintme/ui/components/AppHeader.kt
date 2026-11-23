@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +39,8 @@ fun AppHeader(
     subtitle: String? = null,
     showBackButton: Boolean = false,
     onBackClick: (() -> Unit)? = null,
+    showMenuButton: Boolean = false,
+    onMenuClick: (() -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
     Row(
@@ -60,6 +63,18 @@ fun AppHeader(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = OffWhite
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            } else if (showMenuButton && onMenuClick != null) {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = "Open Navigation Menu",
+                        tint = SkyCyan
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))

@@ -8,10 +8,13 @@ import com.oopssecurity.osintme.data.local.HygienePreferencesManager
 import com.oopssecurity.osintme.data.local.LocalScanHistoryManager
 import com.oopssecurity.osintme.data.model.AffiliateOffer
 import com.oopssecurity.osintme.data.model.EmailBreachResult
+import com.oopssecurity.osintme.data.model.GravatarProfile
 import com.oopssecurity.osintme.data.model.PasswordLeakResult
+import com.oopssecurity.osintme.data.network.GravatarService
 import com.oopssecurity.osintme.data.network.HibpPasswordService
 import com.oopssecurity.osintme.data.network.SupabaseService
 import com.oopssecurity.osintme.data.network.XposedOrNotService
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +27,7 @@ data class BreachUiState(
     val isCheckingEmail: Boolean = false,
     val isCheckingPassword: Boolean = false,
     val emailResult: EmailBreachResult? = null,
+    val gravatarProfile: GravatarProfile? = null,
     val passwordResult: PasswordLeakResult? = null,
     val errorMessage: String? = null,
     val partnerOffers: List<AffiliateOffer> = emptyList()
@@ -69,14 +73,25 @@ class BreachViewModel(
         val target = email.trim()
         if (target.isEmpty()) return
 
-        _uiState.value = _uiState.value.copy(isCheckingEmail = true, errorMessage = null)
+        _uiState.value = _uiState.value.copy(
+            isCheckingEmail = true,
+            errorMessage = null,
+            emailResult = null,
+            gravatarProfile = null
+        )
 
         viewModelScope.launch {
-            val result = XposedOrNotService.checkEmail(target)
-            result.onSuccess { breachData ->
+            val breachDeferred = async { XposedOrNotService.checkEmail(target) }
+            val gravatarDeferred = async { GravatarService.lookupProfile(target) }
+
+            val breachResult = breachDeferred.await()
+            val gravatarResult = gravatarDeferred.await().getOrNull()
+
+            breachResult.onSuccess { breachData ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingEmail = false,
-                    emailResult = breachData
+                    emailResult = breachData,
+                    gravatarProfile = gravatarResult
                 )
                 // Record in private local history
                 historyManager.addScan(
@@ -92,6 +107,7 @@ class BreachViewModel(
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingEmail = false,
+                    gravatarProfile = gravatarResult,
                     errorMessage = err.message ?: "Failed to query breach database"
                 )
             }

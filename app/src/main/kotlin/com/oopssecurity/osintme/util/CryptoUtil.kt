@@ -12,4 +12,10 @@ object CryptoUtil {
         val bytes = md.digest(input.toByteArray(Charsets.UTF_8))
         return bytes.joinToString("") { "%02X".format(it) }
     }
+
+    fun md5(input: String): String {
+        val md = MessageDigest.getInstance("MD5")
+        val bytes = md.digest(input.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
 }
