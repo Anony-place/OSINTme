@@ -21,12 +21,12 @@ object RdapService {
                 .get()
                 .build()
 
-            val response = OsintApiClient.client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("RDAP returned HTTP ${response.code}"))
+            val body = OsintApiClient.client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("RDAP returned HTTP ${response.code}"))
+                }
+                response.body?.string() ?: "{}"
             }
-
-            val body = response.body?.string() ?: "{}"
             val json = JSONObject(body)
 
             var registrar = "Unknown"

@@ -1,13 +1,16 @@
 package com.oopssecurity.osintme.ui.cases
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,11 +21,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -45,26 +47,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.oopssecurity.osintme.data.local.case.CaseRepository
 import com.oopssecurity.osintme.data.model.InvestigationCase
-import com.oopssecurity.osintme.ui.components.AdBannerView
 import com.oopssecurity.osintme.ui.components.AppHeader
 import com.oopssecurity.osintme.ui.theme.CardBorder
 import com.oopssecurity.osintme.ui.theme.CharcoalNavy
 import com.oopssecurity.osintme.ui.theme.DarkerSurface
+import com.oopssecurity.osintme.ui.theme.DisplayFontFamily
+import com.oopssecurity.osintme.ui.theme.EmeraldPrimary
+import com.oopssecurity.osintme.ui.theme.InkBlack
 import com.oopssecurity.osintme.ui.theme.MatrixGreen
+import com.oopssecurity.osintme.ui.theme.MonoFontFamily
 import com.oopssecurity.osintme.ui.theme.MutedSlate
 import com.oopssecurity.osintme.ui.theme.OffWhite
+import com.oopssecurity.osintme.ui.theme.PureWhite
 import com.oopssecurity.osintme.ui.theme.SkyCyan
 import com.oopssecurity.osintme.ui.theme.SlateGrey
 import com.oopssecurity.osintme.ui.theme.SlateObsidian
-import com.oopssecurity.osintme.ui.theme.SoftIndigo
-import com.oopssecurity.osintme.ui.theme.StatusRisk
+import com.oopssecurity.osintme.ui.theme.SurfaceElevated
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -77,7 +83,7 @@ fun CaseManagementScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val repository = remember { CaseRepository(context) }
+    val repository = remember(context) { CaseRepository(context) }
     val cases by repository.casesFlow.collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
 
@@ -90,28 +96,29 @@ fun CaseManagementScreen(
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
             containerColor = CharcoalNavy,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(14.dp),
             title = {
                 Text(
-                    text = "OPEN NEW INVESTIGATION CASE",
-                    color = SkyCyan,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
+                    text = "Open Investigation Dossier",
+                    color = OffWhite,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = DisplayFontFamily
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Group multiple indicators (IPs, emails, domains, usernames) into an evidence dossier.",
+                        text = "Correlate indicators (domains, emails, handles, EXIF hashes) in a local SQLite evidence dossier.",
                         color = SlateGrey,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
                     )
 
                     OutlinedTextField(
                         value = newTitle,
                         onValueChange = { newTitle = it },
-                        label = { Text("Case Name (e.g. Op Falcon)", color = MutedSlate, fontSize = 12.sp) },
+                        label = { Text("Case Name (e.g. Domain Audit)", color = MutedSlate, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = OffWhite,
                             unfocusedTextColor = OffWhite,
@@ -121,13 +128,15 @@ fun CaseManagementScreen(
                             unfocusedContainerColor = DarkerSurface
                         ),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("case_title_input")
                     )
 
                     OutlinedTextField(
                         value = newTarget,
                         onValueChange = { newTarget = it },
-                        label = { Text("Primary Target Indicator", color = MutedSlate, fontSize = 12.sp) },
+                        label = { Text("Primary Target Indicator *", color = MutedSlate, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = OffWhite,
                             unfocusedTextColor = OffWhite,
@@ -137,13 +146,15 @@ fun CaseManagementScreen(
                             unfocusedContainerColor = DarkerSurface
                         ),
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("case_target_input")
                     )
 
                     OutlinedTextField(
                         value = newNotes,
                         onValueChange = { newNotes = it },
-                        label = { Text("Initial Field Notes (Optional)", color = MutedSlate, fontSize = 12.sp) },
+                        label = { Text("Initial Analyst Notes (Optional)", color = MutedSlate, fontSize = 12.sp) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = OffWhite,
                             unfocusedTextColor = OffWhite,
@@ -170,10 +181,17 @@ fun CaseManagementScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SkyCyan),
-                    shape = RoundedCornerShape(6.dp)
+                    enabled = newTarget.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EmeraldPrimary,
+                        contentColor = PureWhite,
+                        disabledContainerColor = SurfaceElevated,
+                        disabledContentColor = MutedSlate
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.testTag("confirm_create_case_button")
                 ) {
-                    Text("Create Case", color = SlateObsidian, fontWeight = FontWeight.Bold)
+                    Text("Create Dossier", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -187,10 +205,11 @@ fun CaseManagementScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = SlateObsidian,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             AppHeader(
-                title = "Cases & Target Dossiers",
-                subtitle = "Local evidence graph & aggregated investigation dossiers",
+                title = "Cases & Dossiers",
+                subtitle = "Local SQLite evidence correlation & reports",
                 showBackButton = true,
                 onBackClick = onBackClick
             )
@@ -198,80 +217,129 @@ fun CaseManagementScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
-                containerColor = SkyCyan,
-                contentColor = SlateObsidian
+                containerColor = EmeraldPrimary,
+                contentColor = PureWhite,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.testTag("create_case_fab")
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Create Case")
+                Icon(Icons.Default.Add, contentDescription = "Create Investigation Case")
             }
-        },
-        bottomBar = {
-            AdBannerView()
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Header stats
-            Row(
+            // Storage & count header bar
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                colors = CardDefaults.cardColors(containerColor = DarkerSurface),
+                border = BorderStroke(1.dp, CardBorder),
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text(
-                    text = "ACTIVE INVESTIGATIONS (${cases.size})",
-                    color = SkyCyan,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text = "ZERO-CLOUD LOCAL STORAGE",
-                    color = MatrixGreen,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Storage,
+                            contentDescription = null,
+                            tint = MatrixGreen,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "LOCAL SQLITE • ZERO CLOUD",
+                            color = MatrixGreen,
+                            fontSize = 10.sp,
+                            fontFamily = MonoFontFamily,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp
+                        )
+                    }
+                    Text(
+                        text = "${cases.size} ACTIVE",
+                        color = SkyCyan,
+                        fontSize = 11.sp,
+                        fontFamily = MonoFontFamily,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             if (cases.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 64.dp),
+                        .padding(bottom = 72.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = null,
-                            tint = MutedSlate,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(SurfaceElevated)
+                                .border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = null,
+                                tint = SkyCyan,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "NO ACTIVE INVESTIGATION CASES",
+                            text = "No Active Dossiers",
                             color = OffWhite,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = DisplayFontFamily
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Tap the + button to open your first target dossier.",
+                            text = "Create a case to collect evidence from Domain, Breach, Identity, Threat, Phone, or EXIF investigations.",
                             color = SlateGrey,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { showCreateDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EmeraldPrimary,
+                                contentColor = PureWhite
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .height(48.dp)
+                                .testTag("empty_create_case_button")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Open First Dossier", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(cases) { item ->
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 88.dp)
+                ) {
+                    items(cases, key = { it.id }) { item ->
                         CaseCard(caseItem = item, onClick = { onSelectCase(item.id) })
                     }
                 }
@@ -289,13 +357,17 @@ private fun CaseCard(caseItem: InvestigationCase, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick),
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .testTag("case_item_card_${caseItem.id}"),
         colors = CardDefaults.cardColors(containerColor = CharcoalNavy),
-        shape = RoundedCornerShape(10.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -303,34 +375,39 @@ private fun CaseCard(caseItem: InvestigationCase, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .background(SkyCyan.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .background(SkyCyan.copy(alpha = 0.14f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = caseItem.status,
                             color = SkyCyan,
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = MonoFontFamily
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = caseItem.title,
                         color = OffWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = DisplayFontFamily,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "TARGET: ${caseItem.target}",
+                    text = caseItem.target,
                     color = MatrixGreen,
                     fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium
+                    fontFamily = MonoFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 if (caseItem.notes.isNotEmpty()) {
@@ -338,23 +415,26 @@ private fun CaseCard(caseItem: InvestigationCase, onClick: () -> Unit) {
                     Text(
                         text = caseItem.notes,
                         color = SlateGrey,
-                        fontSize = 11.sp,
-                        maxLines = 1
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Updated: $dateStr",
+                    text = "UPDATED $dateStr",
                     color = MutedSlate,
                     fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = MonoFontFamily
                 )
             }
 
+            Spacer(modifier = Modifier.width(10.dp))
+
             Icon(
-                imageVector = Icons.Default.ArrowForward,
-                contentDescription = null,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Open Case Dossier",
                 tint = SkyCyan,
                 modifier = Modifier.size(20.dp)
             )

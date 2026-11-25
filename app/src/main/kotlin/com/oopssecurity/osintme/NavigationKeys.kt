@@ -7,6 +7,33 @@ import kotlinx.serialization.Serializable
 data object DashboardNav : NavKey
 
 @Serializable
+data class TargetDossierNav(val target: String = "") : NavKey
+
+@Serializable
+data object ApiVaultNav : NavKey
+
+@Serializable
+data class AiAnalystNav(val initialPrompt: String = "", val caseId: String = "") : NavKey
+
+@Serializable
+data class WaybackNav(val initialTarget: String = "") : NavKey
+
+@Serializable
+data class TlsTakeoverNav(val initialTarget: String = "") : NavKey
+
+@Serializable
+data class RedirectAuditNav(val initialUrl: String = "") : NavKey
+
+@Serializable
+data class IocWorkbenchNav(val initialText: String = "") : NavKey
+
+@Serializable
+data object EmailHeaderNav : NavKey
+
+@Serializable
+data class HashPayloadNav(val initialInput: String = "") : NavKey
+
+@Serializable
 data object CaseManagementNav : NavKey
 
 @Serializable

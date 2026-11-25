@@ -2,6 +2,9 @@ package com.oopssecurity.osintme.data.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.net.InetSocketAddress
 import java.net.Proxy
 
@@ -21,6 +24,7 @@ object OpsecManager {
     private const val KEY_CUSTOM_PORT = "opsec_custom_port"
     private const val KEY_RANDOM_UA = "opsec_random_ua"
     private const val KEY_ANTI_TRACKING = "opsec_anti_tracking"
+    private const val KEY_SCREEN_SHIELD = "opsec_screen_shield"
 
     private val REALISTIC_USER_AGENTS = listOf(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -32,10 +36,14 @@ object OpsecManager {
 
     private var prefs: SharedPreferences? = null
 
+    private val _screenShieldEnabledFlow = MutableStateFlow(false)
+    val screenShieldEnabledFlow: StateFlow<Boolean> = _screenShieldEnabledFlow.asStateFlow()
+
     fun init(context: Context) {
         if (prefs == null) {
             prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         }
+        _screenShieldEnabledFlow.value = prefs?.getBoolean(KEY_SCREEN_SHIELD, false) ?: false
     }
 
     var currentProxyMode: ProxyMode
@@ -58,7 +66,7 @@ object OpsecManager {
     var customPort: Int
         get() = prefs?.getInt(KEY_CUSTOM_PORT, 9050) ?: 9050
         set(value) {
-            prefs?.edit()?.putInt(KEY_CUSTOM_PORT, value)?.apply()
+            prefs?.edit()?.putInt(KEY_CUSTOM_PORT, value.coerceIn(1, 65535))?.apply()
             OsintApiClient.rebuildClient()
         }
 
@@ -72,6 +80,13 @@ object OpsecManager {
         get() = prefs?.getBoolean(KEY_ANTI_TRACKING, true) ?: true
         set(value) {
             prefs?.edit()?.putBoolean(KEY_ANTI_TRACKING, value)?.apply()
+        }
+
+    var screenShieldEnabled: Boolean
+        get() = prefs?.getBoolean(KEY_SCREEN_SHIELD, false) ?: false
+        set(value) {
+            prefs?.edit()?.putBoolean(KEY_SCREEN_SHIELD, value)?.apply()
+            _screenShieldEnabledFlow.value = value
         }
 
     fun getActiveProxy(): Proxy? {
@@ -95,5 +110,15 @@ object OpsecManager {
 
     fun getRandomUserAgent(): String {
         return REALISTIC_USER_AGENTS.random()
+    }
+
+    fun getActiveConfigSummary(): String {
+        return when (val mode = currentProxyMode) {
+            ProxyMode.DIRECT -> "Direct TLS"
+            ProxyMode.TOR_ORBOT_SOCKS5 -> "Tor SOCKS5 (${mode.defaultHost}:${mode.defaultPort})"
+            ProxyMode.TOR_ORBOT_HTTP -> "Tor HTTP (${mode.defaultHost}:${mode.defaultPort})"
+            ProxyMode.CUSTOM_SOCKS5 -> "SOCKS5 ($customHost:$customPort)"
+            ProxyMode.CUSTOM_HTTP -> "HTTP Proxy ($customHost:$customPort)"
+        }
     }
 }

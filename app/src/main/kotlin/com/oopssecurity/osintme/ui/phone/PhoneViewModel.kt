@@ -3,7 +3,6 @@ package com.oopssecurity.osintme.ui.phone
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.oopssecurity.osintme.data.ads.AdMediationManager
 import com.oopssecurity.osintme.data.local.LocalScanHistoryManager
 import com.oopssecurity.osintme.data.model.PhoneReconResult
 import com.oopssecurity.osintme.data.network.PhoneReconService
@@ -55,7 +54,6 @@ class PhoneViewModel(
                         target = res.e164Format,
                         summary = "${res.countryName} • ${res.lineType}"
                     )
-                    AdMediationManager.recordCompletedScan()
                 },
                 onFailure = { err ->
                     _uiState.value = _uiState.value.copy(

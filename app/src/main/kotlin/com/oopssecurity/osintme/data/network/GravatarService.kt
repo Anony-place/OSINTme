@@ -26,16 +26,15 @@ object GravatarService {
                 .get()
                 .build()
 
-            val response = OsintApiClient.client.newCall(request).execute()
-            if (response.code == 404) {
-                return@withContext Result.success(null)
+            val body = OsintApiClient.client.newCall(request).execute().use { response ->
+                if (response.code == 404) {
+                    return@withContext Result.success(null)
+                }
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("Gravatar query failed with code ${response.code}"))
+                }
+                response.body?.string() ?: return@withContext Result.success(null)
             }
-
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Gravatar query failed with code ${response.code}"))
-            }
-
-            val body = response.body?.string() ?: return@withContext Result.success(null)
             val root = JSONObject(body)
             val entryArr = root.optJSONArray("entry") ?: return@withContext Result.success(null)
             if (entryArr.length() == 0) return@withContext Result.success(null)

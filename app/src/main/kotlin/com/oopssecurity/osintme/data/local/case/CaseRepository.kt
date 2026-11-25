@@ -65,6 +65,11 @@ class CaseRepository(context: Context) {
         _casesFlow.value = list
     }
 
+    suspend fun getAllCases(): List<InvestigationCase> = withContext(Dispatchers.IO) {
+        refreshCases()
+        _casesFlow.value
+    }
+
     suspend fun createCase(title: String, target: String, notes: String = ""): InvestigationCase = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val newCase = InvestigationCase(

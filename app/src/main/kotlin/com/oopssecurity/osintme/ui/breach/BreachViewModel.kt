@@ -3,16 +3,15 @@ package com.oopssecurity.osintme.ui.breach
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.oopssecurity.osintme.data.ads.AdMediationManager
 import com.oopssecurity.osintme.data.local.HygienePreferencesManager
 import com.oopssecurity.osintme.data.local.LocalScanHistoryManager
-import com.oopssecurity.osintme.data.model.AffiliateOffer
 import com.oopssecurity.osintme.data.model.EmailBreachResult
+import com.oopssecurity.osintme.data.model.EmailSecurityAudit
 import com.oopssecurity.osintme.data.model.GravatarProfile
 import com.oopssecurity.osintme.data.model.PasswordLeakResult
+import com.oopssecurity.osintme.data.network.CloudflareDohService
 import com.oopssecurity.osintme.data.network.GravatarService
 import com.oopssecurity.osintme.data.network.HibpPasswordService
-import com.oopssecurity.osintme.data.network.SupabaseService
 import com.oopssecurity.osintme.data.network.XposedOrNotService
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,9 +27,9 @@ data class BreachUiState(
     val isCheckingPassword: Boolean = false,
     val emailResult: EmailBreachResult? = null,
     val gravatarProfile: GravatarProfile? = null,
+    val emailSecurity: EmailSecurityAudit? = null,
     val passwordResult: PasswordLeakResult? = null,
-    val errorMessage: String? = null,
-    val partnerOffers: List<AffiliateOffer> = emptyList()
+    val errorMessage: String? = null
 )
 
 class BreachViewModel(
@@ -51,10 +50,6 @@ class BreachViewModel(
         if (initialEmail.isNotBlank()) {
             checkEmail(initialEmail)
         }
-        viewModelScope.launch {
-            val offers = SupabaseService.getAffiliateOffers("BREACH")
-            _uiState.value = _uiState.value.copy(partnerOffers = offers)
-        }
     }
 
     fun selectTab(tabIndex: Int) {
@@ -74,40 +69,45 @@ class BreachViewModel(
         if (target.isEmpty()) return
 
         _uiState.value = _uiState.value.copy(
+            emailInput = target,
             isCheckingEmail = true,
             errorMessage = null,
             emailResult = null,
-            gravatarProfile = null
+            gravatarProfile = null,
+            emailSecurity = null
         )
 
         viewModelScope.launch {
             val breachDeferred = async { XposedOrNotService.checkEmail(target) }
             val gravatarDeferred = async { GravatarService.lookupProfile(target) }
+            val domainSecDeferred = async {
+                if (target.contains("@")) CloudflareDohService.auditEmailSecurity(target).getOrNull() else null
+            }
 
             val breachResult = breachDeferred.await()
             val gravatarResult = gravatarDeferred.await().getOrNull()
+            val domainSecResult = domainSecDeferred.await()
 
             breachResult.onSuccess { breachData ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingEmail = false,
                     emailResult = breachData,
-                    gravatarProfile = gravatarResult
+                    gravatarProfile = gravatarResult,
+                    emailSecurity = domainSecResult
                 )
-                // Record in private local history
                 historyManager.addScan(
                     type = "Email Breach",
                     target = target,
-                    summary = if (breachData.isBreached) "${breachData.totalBreaches} breaches found" else "0 breaches (Clean)"
+                    summary = if (breachData.isBreached) "${breachData.totalBreaches} breaches detected" else "0 public breaches"
                 )
-                // Deduct points from hygiene if breached
                 if (breachData.isBreached) {
                     hygieneManager.recordBreachDeduction(breachData.totalBreaches)
                 }
-                AdMediationManager.recordCompletedScan()
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingEmail = false,
                     gravatarProfile = gravatarResult,
+                    emailSecurity = domainSecResult,
                     errorMessage = err.message ?: "Failed to query breach database"
                 )
             }
@@ -128,14 +128,13 @@ class BreachViewModel(
                     passwordResult = leakData
                 )
                 historyManager.addScan(
-                    type = "Password Check",
-                    target = "Hash Prefix: ${leakData.sha1Prefix}***",
-                    summary = if (leakData.isLeaked) "${leakData.leakCount} leak occurrences" else "Safe (0 leaks)"
+                    type = "Password Audit",
+                    target = "SHA-1 Prefix: ${leakData.sha1Prefix}***",
+                    summary = if (leakData.isLeaked) "${leakData.leakCount} corpus hits" else "0 corpus hits"
                 )
                 if (leakData.isLeaked) {
                     hygieneManager.recordBreachDeduction(1)
                 }
-                AdMediationManager.recordCompletedScan()
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(
                     isCheckingPassword = false,

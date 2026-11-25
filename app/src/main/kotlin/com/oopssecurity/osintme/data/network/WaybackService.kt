@@ -1,10 +1,12 @@
 package com.oopssecurity.osintme.data.network
 
 import com.oopssecurity.osintme.data.model.WaybackUrlItem
+import com.oopssecurity.osintme.util.NetworkSecurityGuard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONArray
+import java.net.URLEncoder
 
 object WaybackService {
     private const val CDX_API_URL = "https://web.archive.org/cdx/search/cdx"
@@ -16,7 +18,12 @@ object WaybackService {
             if (clean.contains("/")) clean = clean.substringBefore("/")
             if (clean.contains(":")) clean = clean.substringBefore(":")
 
-            val url = "$CDX_API_URL?url=*.$clean/*&output=json&collapse=urlkey&fl=original,statuscode,timestamp&limit=50"
+            if (clean.isBlank() || !clean.contains(".") || NetworkSecurityGuard.isBlockedPrivateHost(clean)) {
+                return@withContext Result.failure(Exception("Enter a valid public domain for Wayback archive lookup"))
+            }
+
+            val encoded = URLEncoder.encode("*.$clean/*", "UTF-8")
+            val url = "$CDX_API_URL?url=$encoded&output=json&collapse=urlkey&fl=original,statuscode,timestamp&limit=50"
 
             val request = Request.Builder()
                 .url(url)
@@ -24,12 +31,12 @@ object WaybackService {
                 .get()
                 .build()
 
-            val response = OsintApiClient.client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("Wayback CDX responded with HTTP ${response.code}"))
+            val body = OsintApiClient.client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("Wayback CDX responded with HTTP ${response.code}"))
+                }
+                response.body?.string() ?: return@withContext Result.success(emptyList())
             }
-
-            val body = response.body?.string() ?: return@withContext Result.success(emptyList())
             val rootArray = JSONArray(body)
 
             if (rootArray.length() <= 1) {

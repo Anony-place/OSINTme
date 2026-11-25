@@ -1,10 +1,8 @@
 package com.oopssecurity.osintme.ui.username
 
-import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.oopssecurity.osintme.data.ads.AdMediationManager
 import com.oopssecurity.osintme.data.local.LocalScanHistoryManager
 import com.oopssecurity.osintme.data.model.ReconStatus
 import com.oopssecurity.osintme.data.model.UsernameCheckResult
@@ -19,10 +17,9 @@ data class UsernameUiState(
     val usernameInput: String = "",
     val isScanning: Boolean = false,
     val results: List<UsernameCheckResult> = emptyList(),
-    val totalToScan: Int = 0,
+    val totalToScan: Int = PlatformReconService.ALL_PLATFORMS.size,
     val scannedCount: Int = 0,
-    val selectedFilter: Int = 0, // 0 = All, 1 = Found Only, 2 = Available Only
-    val isDeepScanUnlocked: Boolean = false
+    val selectedFilter: Int = 0 // 0 = All, 1 = Found, 2 = Not Found, 3 = Unverified/Rate-Limited
 )
 
 class UsernameViewModel(
@@ -32,21 +29,13 @@ class UsernameViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        UsernameUiState(
-            usernameInput = initialUsername,
-            isDeepScanUnlocked = AdMediationManager.deepScanUnlocked.value
-        )
+        UsernameUiState(usernameInput = initialUsername)
     )
     val uiState: StateFlow<UsernameUiState> = _uiState.asStateFlow()
 
     private var scanJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            AdMediationManager.deepScanUnlocked.collect { unlocked ->
-                _uiState.value = _uiState.value.copy(isDeepScanUnlocked = unlocked)
-            }
-        }
         if (initialUsername.isNotBlank()) {
             startScan(initialUsername)
         }
@@ -60,15 +49,20 @@ class UsernameViewModel(
         _uiState.value = _uiState.value.copy(selectedFilter = filterIndex)
     }
 
+    fun stopScan() {
+        scanJob?.cancel()
+        _uiState.value = _uiState.value.copy(isScanning = false)
+    }
+
     fun startScan(username: String = _uiState.value.usernameInput) {
-        val target = username.trim()
+        val target = username.trim().removePrefix("@")
         if (target.isEmpty()) return
 
         scanJob?.cancel()
-        val limit = if (_uiState.value.isDeepScanUnlocked) null else 15
-        val total = limit ?: PlatformReconService.ALL_PLATFORMS.size
+        val total = PlatformReconService.ALL_PLATFORMS.size
 
         _uiState.value = _uiState.value.copy(
+            usernameInput = target,
             isScanning = true,
             results = emptyList(),
             totalToScan = total,
@@ -77,10 +71,21 @@ class UsernameViewModel(
 
         scanJob = viewModelScope.launch {
             val accumulated = mutableListOf<UsernameCheckResult>()
-            PlatformReconService.scanUsernameFlow(target, limit).collect { check ->
+            PlatformReconService.scanUsernameFlow(target, limitPlatforms = null).collect { check ->
                 accumulated.add(check)
+                val sorted = accumulated.sortedWith(
+                    compareBy<UsernameCheckResult> {
+                        when (it.status) {
+                            ReconStatus.FOUND -> 0
+                            ReconStatus.RATE_LIMITED -> 1
+                            ReconStatus.AVAILABLE -> 2
+                            ReconStatus.ERROR -> 3
+                            ReconStatus.IDLE, ReconStatus.CHECKING -> 4
+                        }
+                    }.thenBy { it.platformName }
+                )
                 _uiState.value = _uiState.value.copy(
-                    results = accumulated.toList(),
+                    results = sorted,
                     scannedCount = accumulated.size
                 )
             }
@@ -89,18 +94,9 @@ class UsernameViewModel(
             val foundCount = accumulated.count { it.status == ReconStatus.FOUND }
             historyManager.addScan(
                 type = "Username Recon",
-                target = target,
-                summary = "Found on $foundCount/${accumulated.size} platforms"
+                target = "@$target",
+                summary = "Found on $foundCount of ${accumulated.size} platforms"
             )
-            AdMediationManager.recordCompletedScan()
-        }
-    }
-
-    fun unlockDeepScanWithReward(activity: Activity?) {
-        AdMediationManager.showRewardedVideo(activity) {
-            _uiState.value = _uiState.value.copy(isDeepScanUnlocked = true)
-            // Re-run scan with full platform list
-            startScan()
         }
     }
 }

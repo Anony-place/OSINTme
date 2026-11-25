@@ -25,16 +25,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oopssecurity.osintme.ui.theme.CardBorder
+import com.oopssecurity.osintme.ui.theme.MonoFontFamily
 import com.oopssecurity.osintme.ui.theme.MutedSlate
 import com.oopssecurity.osintme.ui.theme.SkyCyan
 import com.oopssecurity.osintme.ui.theme.TechCodeBackground
+import com.oopssecurity.osintme.util.SafeBrowserLauncher
 
 @Composable
 fun CodeBlock(
@@ -44,16 +43,15 @@ fun CodeBlock(
     modifier: Modifier = Modifier
 ) {
     val displayContent = if (code.isNotEmpty()) code else text
-    val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(TechCodeBackground)
-            .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
-            .padding(10.dp)
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -63,7 +61,6 @@ fun CodeBlock(
             if (title != null) {
                 Text(
                     text = title,
-                    fontSize = 11.sp,
                     color = MutedSlate,
                     style = MaterialTheme.typography.labelSmall
                 )
@@ -73,16 +70,16 @@ fun CodeBlock(
 
             IconButton(
                 onClick = {
-                    clipboardManager.setText(AnnotatedString(displayContent))
+                    SafeBrowserLauncher.copyToClipboard(context, title ?: "OSINTme", displayContent, isSensitive = true)
                     Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
-                    contentDescription = "Copy",
+                    contentDescription = "Copy to clipboard",
                     tint = SkyCyan,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -96,7 +93,7 @@ fun CodeBlock(
         ) {
             Text(
                 text = displayContent,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = MonoFontFamily,
                 fontSize = 12.sp,
                 color = SkyCyan,
                 lineHeight = 18.sp

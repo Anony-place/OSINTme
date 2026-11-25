@@ -9,6 +9,7 @@ data class BreachedSite(
     val breachDate: String = "",
     val exposedData: List<String> = emptyList(),
     val description: String = "",
+    val industry: String = "",
     val pwnCount: Long = 0
 )
 
@@ -19,6 +20,7 @@ data class EmailBreachResult(
     val breaches: List<BreachedSite> = emptyList(),
     val totalBreaches: Int = 0,
     val exposedDataTypes: List<String> = emptyList(),
+    val riskLabel: String = "",
     val scanTimestamp: Long = System.currentTimeMillis()
 )
 
@@ -34,6 +36,7 @@ enum class ReconStatus {
     CHECKING,
     FOUND,
     AVAILABLE,
+    RATE_LIMITED,
     ERROR
 }
 
@@ -43,7 +46,8 @@ data class UsernameCheckResult(
     val category: String,
     val status: ReconStatus = ReconStatus.IDLE,
     val httpCode: Int = 0,
-    val responseTimeMs: Long = 0
+    val responseTimeMs: Long = 0,
+    val metadata: String = ""
 )
 
 @Serializable
@@ -69,6 +73,7 @@ data class SubdomainResult(
     val rootDomain: String,
     val subdomains: List<String> = emptyList(),
     val totalCount: Int = 0,
+    val sources: List<String> = emptyList(),
     val scanTimestamp: Long = System.currentTimeMillis()
 )
 
@@ -78,6 +83,35 @@ data class DnsRecordItem(
     val name: String,
     val data: String,
     val ttl: Int = 300
+)
+
+@Serializable
+data class SecurityHeaderItem(
+    val name: String,
+    val present: Boolean,
+    val value: String = "",
+    val severity: String = "INFO" // "GOOD", "WARN", "MISSING", "INFO"
+)
+
+@Serializable
+data class TlsHeaderAuditResult(
+    val targetUrl: String,
+    val finalUrl: String,
+    val httpStatus: Int,
+    val responseTimeMs: Long,
+    val serverHeader: String = "",
+    val tlsProtocol: String = "",
+    val cipherSuite: String = "",
+    val certSubject: String = "",
+    val certIssuer: String = "",
+    val certValidFrom: String = "",
+    val certValidUntil: String = "",
+    val certSanCount: Int = 0,
+    val certSans: List<String> = emptyList(),
+    val securityGrade: String = "C",
+    val passedHeadersCount: Int = 0,
+    val totalCheckedHeaders: Int = 6,
+    val headers: List<SecurityHeaderItem> = emptyList()
 )
 
 @Serializable
@@ -98,11 +132,13 @@ data class PhoneReconResult(
     val nationalFormat: String,
     val countryName: String,
     val countryCode: String,
-    val lineType: String, // "Mobile / Cellular", "VoIP / Virtual", "Landline / Fixed"
-    val carrierEstimate: String,
+    val dialCode: String = "",
+    val lineType: String,
+    val numberingPlanNote: String,
     val timezone: String,
     val whatsappUrl: String,
     val telegramUrl: String,
+    val isValidLength: Boolean = true,
     val scanTimestamp: Long = System.currentTimeMillis()
 )
 
@@ -117,19 +153,30 @@ data class WaybackUrlItem(
 @Serializable
 data class EmailSecurityAudit(
     val domain: String,
+    val hasMx: Boolean = false,
+    val mxHosts: List<String> = emptyList(),
     val hasSpf: Boolean,
     val spfRecord: String,
-    val spfPolicy: String, // "-all" (Strict), "~all" (SoftFail), "?all" (Neutral), "+all" (Vulnerable)
+    val spfPolicy: String,
     val hasDmarc: Boolean,
     val dmarcRecord: String,
-    val dmarcPolicy: String, // "reject", "quarantine", "none"
+    val dmarcPolicy: String,
     val isSpoofable: Boolean,
     val riskSummary: String
-)
+) {
+    val grade: String
+        get() = when {
+            hasSpf && hasDmarc && (dmarcPolicy.equals("reject", true) || dmarcPolicy.equals("quarantine", true)) -> "A"
+            hasSpf && hasDmarc -> "B"
+            hasSpf || hasDmarc -> "C"
+            else -> "F"
+        }
+}
 
 data class ExifMetadata(
     val make: String? = null,
     val model: String? = null,
+    val lensModel: String? = null,
     val software: String? = null,
     val dateTime: String? = null,
     val imageWidth: Int = 0,
@@ -143,7 +190,8 @@ data class ExifMetadata(
     val altitude: Double? = null,
     val hasGps: Boolean = false,
     val originalUri: String = "",
-    val fileSizeFormatted: String = ""
+    val fileSizeFormatted: String = "",
+    val sha256Hash: String = ""
 )
 
 data class DorkPreset(
@@ -172,18 +220,6 @@ data class ScanHistoryItem(
 )
 
 @Serializable
-data class AffiliateOffer(
-    val id: String,
-    val trigger_type: String, // "BREACH", "IP_EXPOSURE", "EXIF", "GENERAL"
-    val title: String,
-    val description: String,
-    val cta_text: String,
-    val affiliate_url: String,
-    val badge_text: String = "Sponsored Partner",
-    val is_active: Boolean = true
-)
-
-@Serializable
 data class GravatarAccount(
     val domain: String = "",
     val display: String = "",
@@ -208,7 +244,7 @@ data class GravatarProfile(
 @Serializable
 data class UrlhausPayload(
     val url: String,
-    val urlStatus: String = "online", // "online", "offline"
+    val urlStatus: String = "online",
     val threat: String = "malware_download",
     val tags: List<String> = emptyList(),
     val dateAdded: String = ""
@@ -217,14 +253,42 @@ data class UrlhausPayload(
 @Serializable
 data class UrlhausResult(
     val target: String,
-    val queryStatus: String, // "ok", "no_results", "host_not_found"
+    val queryStatus: String,
     val isMalicious: Boolean,
     val firstSeen: String = "",
     val urlCount: Int = 0,
     val spamhausListed: Boolean = false,
     val surblListed: Boolean = false,
     val payloads: List<UrlhausPayload> = emptyList(),
+    val cloudflareMalwareBlocked: Boolean = false,
+    val cloudflareStandardIps: List<String> = emptyList(),
+    val urlhausNote: String = "",
     val scanTimestamp: Long = System.currentTimeMillis()
+)
+
+data class RedirectHop(
+    val hopIndex: Int = 1,
+    val url: String,
+    val statusCode: Int,
+    val locationHeader: String? = null,
+    val latencyMs: Long = 0L
+)
+
+data class RedirectChainResult(
+    val originalUrl: String,
+    val finalUrl: String,
+    val hops: List<RedirectHop>,
+    val error: String? = null
+)
+
+data class OpsecRouteCheckResult(
+    val publicIp: String,
+    val country: String,
+    val city: String,
+    val isp: String,
+    val asn: String,
+    val latencyMs: Long,
+    val proxyUsed: String
 )
 
 @Serializable
@@ -236,20 +300,20 @@ data class InvestigationCase(
     val updatedAt: Long = System.currentTimeMillis(),
     val notes: String = "",
     val tags: List<String> = emptyList(),
-    val status: String = "ACTIVE" // "ACTIVE", "ARCHIVED", "FLAGGED"
+    val status: String = "ACTIVE"
 )
 
 @Serializable
 data class ScanArtifact(
     val id: String,
     val caseId: String,
-    val wingType: String, // "NETWORK", "IDENTITY", "SOCIAL", "TELEPHONY", "FORENSICS", "THREAT"
-    val artifactType: String, // "SHODAN_IP", "SUBDOMAINS", "BREACHES", "USERNAME", "PHONE", "EXIF", "URLHAUS"
+    val wingType: String,
+    val artifactType: String,
     val queryTarget: String,
     val title: String,
     val summary: String,
     val rawJson: String,
-    val confidence: String = "HIGH", // "HIGH", "MEDIUM", "LOW"
+    val confidence: String = "HIGH",
     val sourceApi: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )

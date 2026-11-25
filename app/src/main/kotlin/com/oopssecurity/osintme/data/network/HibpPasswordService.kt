@@ -38,12 +38,12 @@ object HibpPasswordService {
                 .get()
                 .build()
 
-            val response = OsintApiClient.client.newCall(request).execute()
-            if (!response.isSuccessful) {
-                return@withContext Result.failure(Exception("HTTP ${response.code} received from leak database"))
+            val body = OsintApiClient.client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.failure(Exception("HTTP ${response.code} received from leak database"))
+                }
+                response.body?.string() ?: ""
             }
-
-            val body = response.body?.string() ?: ""
             var count = 0L
 
             // 3. Search for matching suffix locally

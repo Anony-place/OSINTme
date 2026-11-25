@@ -4,17 +4,23 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
+import com.oopssecurity.osintme.data.local.ApiKeyVault
+import com.oopssecurity.osintme.data.network.OpsecManager
 import com.oopssecurity.osintme.ui.theme.OsintMeTheme
 import com.oopssecurity.osintme.ui.theme.SlateObsidian
 import com.oopssecurity.osintme.util.InputClassifier
@@ -26,13 +32,30 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
+        OpsecManager.init(this)
+        ApiKeyVault.init(this)
+        applyScreenShield(OpsecManager.screenShieldEnabled)
 
         extractNavFromIntent(intent)?.let {
             currentNavKey = it
         }
 
         setContent {
+            val shieldOn by OpsecManager.screenShieldEnabledFlow.collectAsStateWithLifecycle()
+            LaunchedEffect(shieldOn) {
+                applyScreenShield(shieldOn)
+            }
+
             OsintMeTheme {
                 Box(
                     modifier = Modifier
@@ -53,29 +76,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun applyScreenShield(enabled: Boolean) {
+        if (enabled) {
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_SECURE,
+                WindowManager.LayoutParams.FLAG_SECURE
+            )
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     private fun extractNavFromIntent(intent: Intent?): NavKey? {
         if (intent == null) return null
-
-        intent.getStringExtra("navigate_to")?.let { target ->
-            val targetArg = intent.getStringExtra("target_arg") ?: ""
-            return when (target.lowercase()) {
-                "cases", "case_management" -> CaseManagementNav
-                "case_detail" -> CaseDetailNav(targetArg)
-                "threat_intel", "urlhaus" -> ThreatIntelNav(targetArg)
-                "opsec" -> OpsecSettingsNav
-                "breach" -> BreachAuditorNav(targetArg)
-                "username" -> UsernameReconNav(targetArg)
-                "phone" -> PhoneReconNav(targetArg)
-                "domain" -> DomainReconNav(targetArg)
-                "dorks" -> DorkGeneratorNav(targetArg)
-                "sanitizer" -> LinkSanitizerNav(targetArg)
-                "hygiene" -> HygieneChecklistNav
-                "history" -> ScanHistoryNav
-                "compliance" -> ComplianceDisclaimerNav
-                else -> null
-            }
-        }
-
         if (intent.action != Intent.ACTION_SEND) return null
 
         val type = intent.type ?: return null
@@ -87,19 +100,24 @@ class MainActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 intent.getParcelableExtra(Intent.EXTRA_STREAM)
             }
-            if (uri != null) {
+            // Strictly accept content:// URIs only — block file:// traversal attempts from external apps
+            if (uri != null && uri.scheme.equals("content", ignoreCase = true)) {
                 return ExifInspectorNav(uri.toString())
             }
         } else if (type == "text/plain") {
-            val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()
-            if (!text.isNullOrEmpty()) {
-                return when (InputClassifier.classify(text)) {
-                    InputType.TRACKING_URL -> LinkSanitizerNav(text)
-                    InputType.EMAIL -> BreachAuditorNav(text)
-                    InputType.IP_ADDRESS, InputType.DOMAIN -> DomainReconNav(text)
-                    InputType.PHONE_NUMBER -> PhoneReconNav(text)
-                    InputType.USERNAME -> UsernameReconNav(text)
-                    InputType.GENERIC_KEYWORD -> DorkGeneratorNav(text)
+            val rawText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                ?.filter { it.code >= 0x20 && it.code != 0x7F }
+                ?.trim()
+                ?.take(512)
+            if (!rawText.isNullOrEmpty()) {
+                return when (InputClassifier.classify(rawText)) {
+                    InputType.TRACKING_URL -> TargetDossierNav(rawText)
+                    InputType.EMAIL -> TargetDossierNav(rawText)
+                    InputType.IP_ADDRESS, InputType.DOMAIN -> TargetDossierNav(rawText)
+                    InputType.HASH -> HashPayloadNav(rawText)
+                    InputType.PHONE_NUMBER -> PhoneReconNav(rawText)
+                    InputType.USERNAME -> TargetDossierNav(rawText)
+                    InputType.GENERIC_KEYWORD -> TargetDossierNav(rawText)
                 }
             }
         }

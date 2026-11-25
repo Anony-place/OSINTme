@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -29,11 +29,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.oopssecurity.osintme.data.local.ExposureScoreState
 import com.oopssecurity.osintme.ui.theme.CardBorder
 import com.oopssecurity.osintme.ui.theme.CharcoalNavy
+import com.oopssecurity.osintme.ui.theme.DisplayFontFamily
+import com.oopssecurity.osintme.ui.theme.MonoFontFamily
 import com.oopssecurity.osintme.ui.theme.OffWhite
 import com.oopssecurity.osintme.ui.theme.SkyCyan
 import com.oopssecurity.osintme.ui.theme.SlateGrey
@@ -60,9 +63,9 @@ fun ExposureScoreCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(CharcoalNavy)
-            .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
             .padding(16.dp)
     ) {
         Row(
@@ -79,49 +82,47 @@ fun ExposureScoreCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "DIGITAL EXPOSURE SCORE",
-                    fontSize = 11.sp,
+                    text = "SECURITY POSTURE",
+                    style = MaterialTheme.typography.labelSmall,
                     color = SlateGrey,
-                    style = MaterialTheme.typography.labelSmall
+                    fontFamily = MonoFontFamily
                 )
             }
 
-            // Share privacy summary button
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(SurfaceElevated)
+                    .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
                     .clickable {
                         val shareText = """
-                            🛡️ OSINTme Privacy & Exposure Audit
+                            OSINTme Security Posture Summary
                             Score: $score/100 (${scoreState.ratingLabel})
-                            Security Hygiene Checks: ${scoreState.completedChecksCount}/${scoreState.totalChecksCount} Completed
-                            Known Breach Penalties: ${scoreState.knownBreachesDeduction} pts
-                            
-                            Audit your digital footprint with OSINTme by Oops Security.
+                            Verified Practices: ${scoreState.completedChecksCount}/${scoreState.totalChecksCount}
+                            Known Breach Deductions: -${scoreState.knownBreachesDeduction} pts
                         """.trimIndent()
                         val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
                             putExtra(Intent.EXTRA_TEXT, shareText)
                             type = "text/plain"
                         }
-                        context.startActivity(Intent.createChooser(sendIntent, "Share Privacy Score"))
+                        context.startActivity(Intent.createChooser(sendIntent, "Share Security Posture"))
                     }
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
+                    contentDescription = "Share security posture",
                     tint = SoftIndigo,
-                    modifier = Modifier.size(12.dp)
+                    modifier = Modifier.size(13.dp)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(5.dp))
                 Text(
                     text = "Share",
                     fontSize = 11.sp,
                     color = SoftIndigo,
-                    style = MaterialTheme.typography.labelSmall
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -132,14 +133,13 @@ fun ExposureScoreCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Circular score gauge
             Box(
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(68.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
                     progress = { score / 100f },
-                    modifier = Modifier.size(72.dp),
+                    modifier = Modifier.size(68.dp),
                     color = scoreColor,
                     trackColor = CardBorder,
                     strokeWidth = 6.dp
@@ -147,14 +147,16 @@ fun ExposureScoreCard(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "$score",
-                        style = MaterialTheme.typography.titleLarge,
+                        fontFamily = DisplayFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
                         color = OffWhite
                     )
                     Text(
                         text = "/100",
                         fontSize = 10.sp,
                         color = SlateGrey,
-                        style = MaterialTheme.typography.labelSmall
+                        fontFamily = MonoFontFamily
                     )
                 }
             }
@@ -164,61 +166,65 @@ fun ExposureScoreCard(
             Column(modifier = Modifier.weight(1f)) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(scoreColor.copy(alpha = 0.15f))
-                        .border(1.dp, scoreColor.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(scoreColor.copy(alpha = 0.14f))
+                        .border(1.dp, scoreColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = scoreState.ratingLabel,
                         fontSize = 10.sp,
                         color = scoreColor,
-                        style = MaterialTheme.typography.labelSmall
+                        fontFamily = MonoFontFamily,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
-                    text = "${scoreState.completedChecksCount} of ${scoreState.totalChecksCount} security practices verified.",
+                    text = "${scoreState.completedChecksCount} of ${scoreState.totalChecksCount} hygiene controls verified.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = SlateGrey
                 )
 
                 if (scoreState.knownBreachesDeduction > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Exposures deducted: -${scoreState.knownBreachesDeduction} pts",
+                        text = "Breach exposure impact: -${scoreState.knownBreachesDeduction} pts",
                         fontSize = 11.sp,
                         color = StatusRisk,
-                        style = MaterialTheme.typography.labelSmall
+                        fontFamily = MonoFontFamily
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // Action to open checklist
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
+                .heightIn(min = 44.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(SurfaceElevated)
+                .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
                 .clickable { onViewChecklistClick() }
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "View Security Hygiene Checklist",
+                text = "Open Security Hygiene Checklist",
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
                 color = SkyCyan
             )
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 tint = SkyCyan,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(18.dp)
             )
         }
     }

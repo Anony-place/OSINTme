@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.oopssecurity.osintme.data.ads.AdMediationManager
 import com.oopssecurity.osintme.data.local.ImageExifCleaner
 import com.oopssecurity.osintme.data.local.LocalScanHistoryManager
 import com.oopssecurity.osintme.data.model.ExifMetadata
@@ -33,11 +32,7 @@ class ExifViewModel(
 
     init {
         if (!initialUriString.isNullOrBlank()) {
-            try {
-                setImageUri(Uri.parse(initialUriString))
-            } catch (e: Exception) {
-                // Ignore parse errors
-            }
+            runCatching { Uri.parse(initialUriString) }.getOrNull()?.let { setImageUri(it) }
         }
     }
 
@@ -59,10 +54,13 @@ class ExifViewModel(
                 )
                 historyManager.addScan(
                     type = "EXIF Inspection",
-                    target = meta.model ?: "Photo Metadata",
-                    summary = if (meta.hasGps) "Exposed GPS (${meta.latitude}, ${meta.longitude})" else "Device info extracted"
+                    target = meta.model ?: "Image Forensics",
+                    summary = if (meta.hasGps) {
+                        "GPS exposed (${String.format("%.4f", meta.latitude)}, ${String.format("%.4f", meta.longitude)})"
+                    } else {
+                        "SHA-256 & EXIF extracted (${meta.fileSizeFormatted})"
+                    }
                 )
-                AdMediationManager.recordCompletedScan()
             }.onFailure { err ->
                 _uiState.value = _uiState.value.copy(
                     isExtracting = false,
@@ -84,9 +82,9 @@ class ExifViewModel(
                     cleanUri = cleanUri
                 )
                 historyManager.addScan(
-                    type = "EXIF Stripper",
-                    target = "Metadata Cleared",
-                    summary = "Generated sanitized image without device or GPS tags"
+                    type = "EXIF Sanitizer",
+                    target = "Clean Copy Exported",
+                    summary = "Stripped camera, software, and GPS metadata segments"
                 )
                 onReadyToShare(cleanUri)
             }.onFailure { err ->
